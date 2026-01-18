@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Socket Chat</title>
+  <style>
+    body {
+      background-image: url('C:/Users/hingm/Desktop/Khushi.jpg'); /* Replace with your image path */
+      background-size: cover; /* Scales the image to cover the entire area */
+      background-repeat: no-repeat; /* Prevents tiling */
+      background-attachment: fixed; /* Keeps the image fixed during scrolling */
+      margin: 0; /* Removes default margin */
+      padding: 20px; /* Adds padding for content */
+    }
+  </style>
+</head>
+<body>
+  <h2 style="color: red;">Chat With Me !!</h2>
+
+  <input id="msg" placeholder="Type message..." />
+  <input type="file" id="fileInput" />
+  <button onclick="sendMessage()" style="background-color: blue; color: white;">Send</button>
+
+  <ul id="messages"></ul>
+
+  <!-- Socket.IO client -->
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+
+  <script>
+    const socket = io("http://localhost:3000");
+
+    function sendMessage() {
+      const msg = document.getElementById("msg").value;
+      const fileInput = document.getElementById("fileInput");
+      const sendTime = new Date().toLocaleTimeString();
+
+      if (msg.trim()) {
+        socket.emit("send_message", { msg, sendTime, type: 'text' });
+        document.getElementById("msg").value = "";
+      }
+
+      if (fileInput.files[0]) {
+        const file = fileInput.files[0];
+        const reader = new FileReader();
+        reader.onload = () => {
+          socket.emit("send_message", { msg: reader.result, sendTime, type: 'file', fileName: file.name, fileType: file.type });
+          fileInput.value = "";
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+
+    socket.on("receive_message", (data) => {
+      const receiveTime = new Date().toLocaleTimeString();
+      const li = document.createElement("li");
+
+      if (data.type === 'file') {
+        if (data.fileType.startsWith('image/')) {
+          const img = document.createElement("img");
+          img.src = data.msg;
+          img.style.maxWidth = "200px";
+          li.appendChild(img);
+        } else {
+          const link = document.createElement("a");
+          link.href = data.msg;
+          link.download = data.fileName;
+          link.textContent = `Download ${data.fileName}`;
+          li.appendChild(link);
+        }
+      } else {
+        li.textContent = `${data.msg} (Sent: ${data.sendTime}, Received: ${receiveTime})`;
+      }
+
+      document.getElementById("messages").appendChild(li);
+    });
+  </script>
+</body>
+</html>
